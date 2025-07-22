@@ -1,1 +1,1 @@
-Test
+This program takes a referance document and types it at a given random WPM. This is used for type testers where you might want to excell in typing speed. It has random timing as to not set off the typer checker robot.
