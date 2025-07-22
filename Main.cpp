@@ -7,6 +7,7 @@
 #include <print>
 #include <random>
 #include <numeric>
+#include <fstream>
 
 // (inclusive) 
 int randomInteger(int min, int max) {
@@ -53,35 +54,21 @@ void sendSmartInput(const char c) {
 	}
 }
 
-
-std::vector<std::string> splitString(std::string& s, const char delimter = ' ') {
-	std::vector<std::string> strs{};
-	auto parts = s | std::views::split(delimter);
-
-	for (const auto&& part : parts) {
-		strs.emplace_back(part.begin(), part.end());
-	}
-
-	return strs;
-}
-
-std::vector<std::string> NextElements(std::vector<std::string>* in, std::size_t N /* amount of elements to get*/) {
-
-		std::vector<std::string> next{};
-
-		if (in->size() < N) {
-			N = in->size();
+std::vector<std::string> NextElements(std::ifstream* file, std::size_t N /* amount of elements to get*/) {
+		if (!file->is_open()) {
+			return std::vector<std::string>{};
 		}
 
-		next.reserve(N);
+		std::vector<std::string> elements{};
+		elements.reserve(N);
 
-		for (int i = 0; i < N; ++i) {
-			next.push_back(std::move(in->at(i)));
+		
+		std::string word;
+		while (elements.size() < N && *file >> word) {
+			elements.emplace_back(std::move(word));
 		}
 
-		in->erase(in->begin(), in->begin() + N);
-
-		return next;
+		return elements;
 }
 
 int CumStrSize(std::vector<std::string> vec) {
@@ -95,28 +82,68 @@ int CumStrSize(std::vector<std::string> vec) {
 	);
 }
 
-int main() {
-	std::string input = "Hello, World My name is OneCheetah and I am coding in c++ being we thought java was very STINKY and we hate it so we are using this bumass language int the worst IDE on gods green earth!!!!!!!!!!!!";
-	std::vector<std::string> strs = splitString(input);
-	constexpr int WPM = 30;
+void KeyboardDeleteAll() {
+	sendKey(VK_CONTROL, true);
+	sendKey('A', true);
+	Sleep(50);
+	sendKey('A', false);
+	sendKey(VK_CONTROL, false);
+
+	Sleep(25);
+
+	sendKey(VK_BACK, true);  
+	Sleep(50);
+	sendKey(VK_BACK, false);   
+}
+
+void Countdown(int n) {
+	for (int i = n; i > 0; --i) {
+		std::println("{}", i);
+		Sleep(1000L);
+	} 
+
+}
+
+int main(int argc, char* argv[]) {
+	if (argc <= 1) {
+		std::println("Please provide the file path as an argument");
+		Sleep(1000L);
+		return 1;
+	}
+	std::ifstream file(argv[1]);
+	if (!file.is_open()) {
+		std::cerr << "Error opening file!" << std::endl;
+		file.close();
+		Sleep(1000L);
+		return 1;
+	}
+
+	constexpr int WPM = 25;
 	constexpr int SPREAD_TIME_MS = 250;
 
-	Sleep(2000);
-	while (!strs.empty()) {
-		std::vector<std::string> nextElements = NextElements(&strs, WPM);
+	Countdown(5);
+	while (true) {
+		std::vector<std::string> nextElements = NextElements(&file, WPM);
 
-		const int timeBetweenInputsMs = (60 / CumStrSize(nextElements)) * 1000;
+		const int timeBetweenInputsMs = static_cast<int>((60.0 / CumStrSize(nextElements)) * 1000.0);
 
 		for (std::string const& str : nextElements) {
 			for (char c : str) {
-				//std::println("{} {}", str, timeBetweenInputsMs);
 				Sleep(randomIntgerSpread(timeBetweenInputsMs, SPREAD_TIME_MS));
 				sendSmartInput(c);
 			}
-			Sleep(randomIntgerSpread(timeBetweenInputsMs, 100));
+			Sleep(randomInteger(50, 100));
 			sendSmartInput(VK_SPACE);
+		}
+
+		if (file.eof()) {
+			file.clear();
+			file.seekg(0, std::ios::beg);
+			std::println("Reached EOF! Restarting...");
+			KeyboardDeleteAll();
 		}
 	}
 
+	file.close();
 	return 0;
 }
